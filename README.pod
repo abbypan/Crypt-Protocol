@@ -18,4 +18,6 @@ L<Crypt::Protocol::OPRF>
 
 L<Crypt::Protocol::SIGMA> 
 
+L<Crypt::Protocol::SPAKE2Plus> 
+
 =cut

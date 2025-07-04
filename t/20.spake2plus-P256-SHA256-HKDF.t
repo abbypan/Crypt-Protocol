@@ -8,10 +8,10 @@ use Smart::Comments;
 use Test::More;
 
 use lib '../lib';
-use Crypt::SPAKE2Plus;
+use Crypt::Protocol::SPAKE2Plus;
 
 
-my $spake2plus = Crypt::SPAKE2Plus->new(curve_name => 'prime256v1');
+my $spake2plus = Crypt::Protocol::SPAKE2Plus->new(curve_name => 'prime256v1');
 my $curve_hr = $spake2plus->{curve_hr};
 my $curve = $spake2plus->{curve};
 my $M_Point = $spake2plus->init_M_or_N('M');
