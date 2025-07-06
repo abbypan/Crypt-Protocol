@@ -14,6 +14,8 @@ use Crypt::OpenSSL::BaseFunc;
 use Crypt::OpenSSL::EC;
 use Crypt::OpenSSL::Bignum;
 
+our $VERSION=0.03;
+
 #use Smart::Comments;
 
 #use Digest::SHA qw/sha256 hmac_sha256/;
