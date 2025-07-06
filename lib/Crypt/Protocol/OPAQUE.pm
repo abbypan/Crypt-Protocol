@@ -13,7 +13,7 @@ use Carp;
 use Crypt::OpenSSL::BaseFunc;
 use Crypt::OpenSSL::EC;
 use Crypt::OpenSSL::Bignum;
-use Crypt::OpenSSL::ECDSA;
+#use Crypt::OpenSSL::ECDSA;
 use Crypt::Protocol::OPRF;
 
 #use Smart::Comments;
@@ -43,20 +43,20 @@ sub recover_credentials {
     $mac_func,     $pwd_harden_func, $unpack_func
   ) = @_;
 
-  my $evaluate_element = hex2point( $cred_request->{ec_params}{group}, unpack( "H*", $cred_response->{Z} ) );
+  my $evaluate_element = hex2point( $group_name, unpack( "H*", $cred_response->{Z} ) );
   my $randomized_pwd =
     derive_random_pwd( $cred_request->{ec_params}, $pwd, $cred_request->{blind}, $evaluate_element, $hash_name, $pwd_harden_func );
   ### randomized_pwd: unpack("H*", $randomized_pwd)
 
   my $hash_func   = EVP_get_digestbyname( $hash_name );
   my $Nh          = EVP_MD_get_size( $hash_func );
-  my $masking_key = hkdf_expand( $randomized_pwd, $hash_name, $Nh, "MaskingKey" );
+  my $masking_key = hkdf_expand( $hash_name, $randomized_pwd, '',  "MaskingKey", $Nh );
   ### masking_key: unpack("H*", $masking_key)
 
   my $L = length( $cred_response->{masked_response} );
   ### $L
   my $masking_nonce           = $cred_response->{masking_nonce};
-  my $credential_response_pad = hkdf_expand( $masking_key, $hash_name, $L, $masking_nonce . "CredentialResponsePad" );
+  my $credential_response_pad = hkdf_expand( $hash_name, $masking_key, '', $masking_nonce . "CredentialResponsePad",  $L  );
 
   my $plain_response = $credential_response_pad ^ $cred_response->{masked_response};
   my $unpack_r       = $unpack_func->( $plain_response );
@@ -108,7 +108,7 @@ sub create_credential_response {
   my $pack_msg = $pack_func->( [ $s_pub, $envelope->{nonce}, $envelope->{auth_tag} ] );
   my $L        = length( $pack_msg );
 
-  my $credential_response_pad = hkdf_expand( $masking_key, $hash_name, $L, $masking_nonce . "CredentialResponsePad" );
+  my $credential_response_pad = hkdf_expand( $hash_name, $masking_key, '', $masking_nonce . "CredentialResponsePad", $L );
   ### credential_response_pad: unpack("H*", $credential_response_pad)
 
   my $masked_response = $credential_response_pad ^ $pack_msg;
@@ -137,9 +137,11 @@ sub finalize_registration_request {
     $pwd_harden_func
   ) = @_;
 
+  ### finalize_registration_request
+
   #my ($pwd, $blind, $DSI, $group_name, $type, $hash_name, $expand_message_func, $clear_cofactor_flag) = @_;
 
-  my $evaluate_element = hex2point( $request->{ec_params}{group}, unpack( "H*", $response->{data} ) );
+  my $evaluate_element = hex2point( $group_name, unpack( "H*", $response->{data} ) );
   my $randomized_pwd =
     derive_random_pwd( $request->{ec_params}, $pwd, $request->{blind}, $evaluate_element, $hash_name, $pwd_harden_func );
   ### blind: $request->{blind}->to_hex
@@ -174,8 +176,11 @@ sub derive_random_pwd {
 
   my $stretched_oprf_output = $harden_func->( $oprf_output );
   ### stretched_oprf_output: unpack("H*", $stretched_oprf_output)
+  
+  my $hash_func   = EVP_get_digestbyname( $hash_name );
+  my $Nh          = EVP_MD_get_size( $hash_func );
 
-  my $randomized_pwd = hkdf_extract( $oprf_output . $stretched_oprf_output, '', $hash_name );
+  my $randomized_pwd = hkdf_extract( $hash_name , $oprf_output . $stretched_oprf_output, '', '', $Nh  );
   ### randomized_pwd: unpack("H*", $randomized_pwd)
 
   return $randomized_pwd;
@@ -190,7 +195,7 @@ sub create_registration_response {
 
   ### $request
 
-  my $ikm = hkdf_expand( $oprf_seed, $hash_name, $Nseed, $credential_identifier . $DSI );
+  my $ikm = hkdf_expand( $hash_name, $oprf_seed, '',  $credential_identifier . $DSI , $Nseed);
   ### ikm: unpack("H*", $ikm)
 
   my $kU_ec_key_r = derive_key_pair( $group_name, $ikm, $info, $DST, $hash_name, $expand_message_func );
@@ -201,7 +206,7 @@ sub create_registration_response {
   my $blindedElement_hex = unpack( "H*", $request->{data} );
   ### $blindedElement_hex
   my $ec_params     = get_ec_params( $group_name );
-  my $blind_element = hex2point( $ec_params->{group}, $blindedElement_hex );
+  my $blind_element = hex2point( $group_name, $blindedElement_hex );
   ### blinded_element:  sn_point2hex($group_name, $blind_element, 2)
 
   my $evaluate_element = evaluate( $ec_params->{group}, $blind_element, $kU, $ec_params->{ctx} );
@@ -253,19 +258,29 @@ sub store {
 
   my $hash_func   = EVP_get_digestbyname( $hash_name );
   my $Nh          = EVP_MD_get_size( $hash_func );
-  my $masking_key = hkdf_expand( $randomized_pwd, $hash_name, $Nh, "MaskingKey" );
-  my $auth_key    = hkdf_expand( $randomized_pwd, $hash_name, $Nh, $envelope_nonce . "AuthKey" );
-  my $export_key  = hkdf_expand( $randomized_pwd, $hash_name, $Nh, $envelope_nonce . "ExportKey" );
+  my $masking_key = hkdf_expand( $hash_name, $randomized_pwd, '', "MaskingKey", $Nh  );
+
+  ### opaque store
+  ### $randomized_pwd
+  ### $hash_name
+  ### $Nh
+  ### $envelope_nonce
+  ### $masking_key
+  
+  my $auth_key    = hkdf_expand( $hash_name, $randomized_pwd, '',  $envelope_nonce . "AuthKey", $Nh );
+  my $export_key    = hkdf_expand( $hash_name, $randomized_pwd, '',  $envelope_nonce . "ExportKey", $Nh );
+
 
   ### auth_key: unpack("H*", $auth_key)
 
-  my $seed = hkdf_expand( $randomized_pwd, $hash_name, $Nseed, $envelope_nonce . "PrivateKey" );
+  my $seed = hkdf_expand( $hash_name, $randomized_pwd, '',  $envelope_nonce . "PrivateKey", $Nseed  );
   ### seed: unpack("H*", $seed)
 
   my $c_ec_key_r = derive_key_pair( $group_name, $seed, $info, $DST, $hash_name, $expand_message_func );
   my $c_priv     = $c_ec_key_r->{priv_bn};
   my $c_pub      = $c_ec_key_r->{pub_bin};
   ### c_priv: $c_priv->to_hex
+  ### c_pub: unpack("H*", $c_pub)
 
   my $cleartext_credentials = create_cleartext_credentials( $s_pub, $c_pub, $s_id, $c_id );
   ### cleartext_credentails: unpack("H*", $cleartext_credentials)
@@ -291,14 +306,14 @@ sub recover {
   my $hash_func = EVP_get_digestbyname( $hash_name );
   my $Nh        = EVP_MD_get_size( $hash_func );
 
-  my $auth_key = hkdf_expand( $randomized_pwd, $hash_name, $Nh, $envelope->{nonce} . "AuthKey" );
+  my $auth_key = hkdf_expand( $hash_name, $randomized_pwd, '', $envelope->{nonce} . "AuthKey" , $Nh);
   ### auth_key: unpack("H*", $auth_key)
-  my $export_key = hkdf_expand( $randomized_pwd, $hash_name, $Nh, $envelope->{nonce} . "ExportKey" );
+  my $export_key = hkdf_expand(  $hash_name, $randomized_pwd, '', $envelope->{nonce} . "ExportKey" , $Nh);
 
   #my $masking_key = hkdf_expand($randomized_pwd, $hash_name, $Nh, "MaskingKey");
   ### export_key: unpack("H*", $export_key)
 
-  my $seed = hkdf_expand( $randomized_pwd, $hash_name, $Nseed, $envelope->{nonce} . "PrivateKey" );
+  my $seed = hkdf_expand( $hash_name, $randomized_pwd, '', $envelope->{nonce} . "PrivateKey" ,  $Nseed);
   ### seed: unpack("H*", $seed)
 
   my $c_ec_key_r = derive_key_pair( $group_name, $seed, $info, $DST, $hash_name, $expand_message_func );

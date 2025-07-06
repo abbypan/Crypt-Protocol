@@ -60,6 +60,8 @@ my $store_r = store($randomized_pwd, $s_pub, $s_id, $c_id, $Nn, $Nseed, $group_n
 ### c_pub:  unpack("H*", $store_r->{c_pub})
 
 is(unpack("H*", $store_r->{export_key}), '77869b0d11debf6fc88c1d192dde9546baf528b2f70c2aea89960fc2178586da', 'store: export_key');
+
+
 is(unpack("H*", $store_r->{envelope}{auth_tag}), 'fea1d1f93f65896f14c0805f6fda165dbaad00212b8b27bcc988222866713ba2', 'store: auth_tag');
 
 my $recover_r = recover($randomized_pwd, $s_pub, $store_r->{envelope}, $s_id, $c_id, $Nseed, $group_name, $info, $DST, $hash_name, $expand_message_func, \&hmac_sha256);

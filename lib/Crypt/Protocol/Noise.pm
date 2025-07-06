@@ -11,17 +11,18 @@ require Exporter;
 use Crypt::OpenSSL::EC;
 use Crypt::OpenSSL::Bignum;
 
+#use Smart::Comments;
+
 #use Crypt::OpenSSL::Hash2Curve;
 use Crypt::OpenSSL::BaseFunc;
 
 use Storable qw(dclone);
 use Digest::HMAC qw(hmac);
-use Crypt::KeyDerivation ':all';
+#use Crypt::KeyDerivation ':all';
 use Carp;
 
 our $VERSION = 0.012;
 
-#use Smart::Comments;
 
 our @ISA    = qw(Exporter);
 our @EXPORT = qw/
@@ -228,6 +229,8 @@ sub init_symmetric_state {
   } else {
     $ss{h} = $cnf->{hash_func}->( $protocol_name );
   }
+
+  ###  ss.h: unpack("H*", $ss{h})
 
   $ss{ck} = $ss{h};
 
@@ -439,8 +442,15 @@ sub decrypt_with_ad {
 
   return $ciphertext unless ( has_key( $ss ) );
 
+  ### ss.k: unpack("H*", $ss->{k})
+  ### ss.n: $ss->{n}
+  ### ad: unpack("H*", $ad)
+  ### ciphertext: unpack("H*", $ciphertext)
+
   my $cipher_info_r = $cnf->{msg_unpack_func}->( $ciphertext );
+  ### @$cipher_info_r
   my $plaintext     = $cnf->{dec_func}->( $ss->{k}, $ss->{n}, $ad, @$cipher_info_r );
+  ### plaintext: unpack("H*", $plaintext)
 
   $ss->{n}++;
 
@@ -472,8 +482,12 @@ sub derive_session_key_iv {
   my ( $cnf, $k, $salt ) = @_;
 
   # hkdf($keying_material, $salt, $hash_name, $len, $info);
-  my $key = hkdf( $k, $salt, $cnf->{hash_name}, $cnf->{key_len}, "Noise Session Key" );
-  my $iv  = hkdf( $k, $salt, $cnf->{hash_name}, $cnf->{iv_len},  "Noise Session IV" );
+  my $key = hkdf( $cnf->{hash_name},$k, $salt, "Noise Session Key" ,  $cnf->{key_len});
+  my $iv  = hkdf( $cnf->{hash_name},$k, $salt,  "Noise Session IV",  $cnf->{iv_len} );
+
+  ### $key
+  ### $iv
+
 
   return ( $key, $iv );
 }

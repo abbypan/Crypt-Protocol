@@ -85,14 +85,14 @@ for my $pattern_name ( qw/NN NK KK IK IX KN NX KX IN NK1/ ) {
                 psk_id => $psk_id,
 
 
-                s_priv => read_key_from_pem( $FindBin::Bin . '/a_s_priv.pem' ),
-                s_pub  => read_pubkey_from_pem( $FindBin::Bin . '/a_s_pub.pem'   ),
-                rs_pub => read_pubkey_from_pem( $FindBin::Bin . '/b_s_pub.pem'   ),
+                s_priv => read_key_from_pem( $FindBin::Bin . '/noise-a_s_priv.pem' ),
+                s_pub  => read_pubkey_from_pem( $FindBin::Bin . '/noise-a_s_pub.pem'   ),
+                rs_pub => read_pubkey_from_pem( $FindBin::Bin . '/noise-b_s_pub.pem'   ),
 
                 s_pub_type  => 'raw',
-                s_pub_bin   => pack( "H*", read_pubkey(read_pubkey_from_pem( $FindBin::Bin . '/a_s_pub.pem' )) ),
+                s_pub_bin   => pack( "H*", read_pubkey(read_pubkey_from_pem( $FindBin::Bin . '/noise-a_s_pub.pem' )) ),
                 rs_pub_type => 'raw',
-                rs_pub_bin  => pack( "H*", read_pubkey(read_pubkey_from_pem( $FindBin::Bin . '/a_rs_pub.pem' )) ),
+                rs_pub_bin  => pack( "H*", read_pubkey(read_pubkey_from_pem( $FindBin::Bin . '/noise-a_rs_pub.pem' )) ),
             },
         );
 
@@ -109,14 +109,14 @@ for my $pattern_name ( qw/NN NK KK IK IX KN NX KX IN NK1/ ) {
                 psk    => $psk,
                 psk_id => $psk_id,
 
-                s_priv => read_key_from_pem( $FindBin::Bin . '/b_s_priv.pem' ),
-                s_pub  => read_pubkey_from_pem( $FindBin::Bin . '/b_s_pub.pem' ),
-                rs_pub => read_pubkey_from_pem( $FindBin::Bin . '/a_s_pub.pem'   ),
+                s_priv => read_key_from_pem( $FindBin::Bin . '/noise-b_s_priv.pem' ),
+                s_pub  => read_pubkey_from_pem( $FindBin::Bin . '/noise-b_s_pub.pem' ),
+                rs_pub => read_pubkey_from_pem( $FindBin::Bin . '/noise-a_s_pub.pem'   ),
 
                 s_pub_type  => 'raw',
-                s_pub_bin   => pack( "H*", read_pubkey(read_pubkey_from_pem( $FindBin::Bin . '/b_s_pub.pem' )) ),
+                s_pub_bin   => pack( "H*", read_pubkey(read_pubkey_from_pem( $FindBin::Bin . '/noise-b_s_pub.pem' )) ),
                 rs_pub_type => 'raw',
-                rs_pub_bin  => pack( "H*", read_pubkey(read_pubkey_from_pem( $FindBin::Bin . '/b_rs_pub.pem' )) ),
+                rs_pub_bin  => pack( "H*", read_pubkey(read_pubkey_from_pem( $FindBin::Bin . '/noise-b_rs_pub.pem' )) ),
             } );
 
   ### a write message to b

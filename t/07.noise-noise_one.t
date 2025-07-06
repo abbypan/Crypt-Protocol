@@ -14,7 +14,7 @@ use Crypt::OpenSSL::Bignum;
 use Crypt::OpenSSL::BaseFunc;
 use Crypt::Protocol::Noise;
 
-use CBOR::XS;
+use CBOR::XS qw/encode_cbor decode_cbor/;
 use Digest::SHA qw/hmac_sha256 sha256/;
 #use Crypt::AuthEnc::GCM qw(gcm_encrypt_authenticate gcm_decrypt_verify);
 use FindBin;
@@ -43,8 +43,9 @@ our $noise_conf = {
   },
   dec_func => sub {                    #decrypt: key, iv, aad, ciphertext, authtag -> plaintext
     ### dec: scalar(@_)
-    ### key, iv, aad, ciphertext, tag, plain
     my ($key, $iv, $aad, $ciphertext, $tag) = @_;
+    ### $key, iv, aad, ciphertext, tag, plain
+    print unpack("H*", $_), "\n" for ($key, $iv, $aad, $ciphertext, $tag);
     my $plain = aead_decrypt('aes-256-gcm', $ciphertext, $aad, $tag, $key, $iv);
     #print unpack("H*", $_), "\n" for ($plain);
     return $plain;
@@ -64,9 +65,12 @@ $noise_conf->{ec_params} = get_ec_params( $noise_conf->{group_name} );
 init_ciphersuite_name( $noise_conf );
 
 
-my @test_psk = ( [ undef, undef ], [ 'test_psk', 0 ], [ 'test_psk', 1 ] );
+my @test_psk = ( [ undef, undef ], 
+    [ 'test_psk', 0 ], [ 'test_psk', 1 ] 
+);
 
 for my $pattern_name ( qw/N K X/ ) {
+#for my $pattern_name ( qw/N / ) {
 
     #my $pattern_cnf = noise_pattern($pattern);
     for my $psk_r ( @test_psk ) {
@@ -84,14 +88,14 @@ for my $pattern_name ( qw/N K X/ ) {
                 psk    => $psk,
                 psk_id => $psk_id,
 
-                s_priv => read_key_from_pem( $FindBin::Bin . '/a_s_priv.pem' ),
-                s_pub  => read_pubkey_from_pem( $FindBin::Bin . '/a_s_pub.pem'   ),
-                rs_pub => read_pubkey_from_pem( $FindBin::Bin . '/b_s_pub.pem'   ),
+                s_priv => read_key_from_pem( $FindBin::Bin . '/noise-a_s_priv.pem' ),
+                s_pub  => read_pubkey_from_pem( $FindBin::Bin . '/noise-a_s_pub.pem'   ),
+                rs_pub => read_pubkey_from_pem( $FindBin::Bin . '/noise-b_s_pub.pem'   ),
 
                 s_pub_type  => 'raw',
-                s_pub_bin   => pack( "H*", read_pubkey(read_pubkey_from_pem( $FindBin::Bin . '/a_s_pub.pem' )) ),
+                s_pub_bin   => pack( "H*", read_pubkey(read_pubkey_from_pem( $FindBin::Bin . '/noise-a_s_pub.pem' )) ),
                 rs_pub_type => 'raw',
-                rs_pub_bin  => pack( "H*", read_pubkey(read_pubkey_from_pem( $FindBin::Bin . '/a_rs_pub.pem' )) ),
+                rs_pub_bin  => pack( "H*", read_pubkey(read_pubkey_from_pem( $FindBin::Bin . '/noise-a_rs_pub.pem' )) ),
             },
         );
 
@@ -108,14 +112,14 @@ for my $pattern_name ( qw/N K X/ ) {
                 psk    => $psk,
                 psk_id => $psk_id,
 
-                s_priv => read_key_from_pem( $FindBin::Bin . '/b_s_priv.pem' ),
-                s_pub  => read_pubkey_from_pem( $FindBin::Bin . '/b_s_pub.pem' ),
-                rs_pub => read_pubkey_from_pem( $FindBin::Bin . '/a_s_pub.pem'   ),
+                s_priv => read_key_from_pem( $FindBin::Bin . '/noise-b_s_priv.pem' ),
+                s_pub  => read_pubkey_from_pem( $FindBin::Bin . '/noise-b_s_pub.pem' ),
+                rs_pub => read_pubkey_from_pem( $FindBin::Bin . '/noise-a_s_pub.pem'   ),
 
                 s_pub_type  => 'raw',
-                s_pub_bin   => pack( "H*", read_pubkey(read_pubkey_from_pem( $FindBin::Bin . '/b_s_pub.pem' )) ),
+                s_pub_bin   => pack( "H*", read_pubkey(read_pubkey_from_pem( $FindBin::Bin . '/noise-b_s_pub.pem' )) ),
                 rs_pub_type => 'raw',
-                rs_pub_bin  => pack( "H*", read_pubkey(read_pubkey_from_pem( $FindBin::Bin . '/b_rs_pub.pem' )) ),
+                rs_pub_bin  => pack( "H*", read_pubkey(read_pubkey_from_pem( $FindBin::Bin . '/noise-b_rs_pub.pem' )) ),
             } );
 
         ### a write message to b
@@ -171,7 +175,7 @@ for my $pattern_name ( qw/N K X/ ) {
     } ## end for my $psk_r ( @test_psk)
 } ## end for my $pattern_name ( ...)
 
-done_testing;
+done_testing();
 
 sub check_pub_s {
     my ( $type, $value ) = @_;
