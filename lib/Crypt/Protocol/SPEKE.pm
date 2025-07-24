@@ -12,7 +12,7 @@ use List::Util qw/min/;
 use Crypt::OpenSSL::BaseFunc;
 use CBOR::XS qw/encode_cbor decode_cbor/;
 use Crypt::Protocol::CPace
-  qw/scalar_mult scalar_mult_vfy lexiographically_larger /;
+  qw/sample_scalar scalar_mult scalar_mult_vfy lexiographically_larger /;
 
 #use Smart::Comments;
 
@@ -27,7 +27,9 @@ our @EXPORT = qw/
 our @EXPORT_OK = @EXPORT;
 
 sub prepare_send_msg {
-    my ( $group, $G, $rnd, $point_hex_type, $ctx, $ID ) = @_;
+    my ( $group, $G, $point_hex_type, $ctx, $ID ) = @_;
+
+    my $rnd = sample_scalar($group, $ctx);
 
     my $point = Crypt::OpenSSL::EC::EC_POINT::new($group);
     ( $point, $rnd ) = scalar_mult( $group, $G, $rnd, $ctx );
